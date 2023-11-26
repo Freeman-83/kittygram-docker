@@ -1,26 +1,115 @@
-#  Как работать с репозиторием финального задания
+# KITTYGRAM
+Социальная сеть для обмена фотографиями любимых питомцев. 
+Пользователи могут зарегистрироваться, добавить нового котика на сайт или изменить существующего, а также просмотреть питомцев других пользователей
 
-## Что нужно сделать
+### Стек технологий:
 
-Настроить запуск проекта Kittygram в контейнерах и CI/CD с помощью GitHub Actions
+Python, Django, Django Rest Framework, Docker, Gunicorn, NGINX, PostgreSQL, Yandex Cloud, Continuous Integration, Continuous Deployment
 
-## Как проверить работу с помощью автотестов
+### Развернуть проект на удаленном сервере:
 
-В корне репозитория создайте файл tests.yml со следующим содержимым:
-```yaml
-repo_owner: ваш_логин_на_гитхабе
-kittygram_domain: полная ссылка (https://доменное_имя) на ваш проект Kittygram
-taski_domain: полная ссылка (https://доменное_имя) на ваш проект Taski
-dockerhub_username: ваш_логин_на_докерхабе
+- Клонировать репозиторий:
+```
+https://github.com/Freeman-83/kittygram-docker
 ```
 
-Скопируйте содержимое файла `.github/workflows/main.yml` в файл `kittygram_workflow.yml` в корневой директории проекта.
+- Установить на сервере Docker, Docker Compose:
 
-Для локального запуска тестов создайте виртуальное окружение, установите в него зависимости из backend/requirements.txt и запустите в корневой директории проекта `pytest`.
+```
+sudo apt install curl                                   # установка утилиты для скачивания файлов
+curl -fsSL https://get.docker.com -o get-docker.sh      # скачать скрипт для установки
+sh get-docker.sh                                        # запуск скрипта
+sudo apt-get install docker-compose-plugin              # последняя версия docker compose
+```
 
-## Чек-лист для проверки перед отправкой задания
+- Скопировать на сервер файлы docker-compose.production.yml:
 
-- Проект Taski доступен по доменному имени, указанному в `tests.yml`.
-- Проект Kittygram доступен по доменному имени, указанному в `tests.yml`.
-- Пуш в ветку main запускает тестирование и деплой Kittygram, а после успешного деплоя вам приходит сообщение в телеграм.
-- В корне проекта есть файл `kittygram_workflow.yml`.
+```
+scp docker-compose.yml username@IP:/home/username/   # username - имя пользователя на сервере
+                                                     # IP - публичный IP сервера
+```
+
+- Для работы с GitHub Actions необходимо в репозитории в разделе Secrets > Actions создать переменные окружения:
+```
+SECRET_KEY              # секретный ключ Django проекта
+DOCKER_PASSWORD         # пароль от Docker Hub
+DOCKER_USERNAME         # логин Docker Hub
+HOST                    # публичный IP сервера
+USER                    # имя пользователя на сервере
+PASSPHRASE              # пароль удаленного сервера
+SSH_KEY                 # приватный ssh-ключ
+TELEGRAM_TO             # ID телеграм-аккаунта для посылки сообщения
+TELEGRAM_TOKEN          # токен бота, посылающего сообщение
+
+POSTGRES_DB             # postgres
+POSTGRES_USER           # postgres
+POSTGRES_PASSWORD       # postgres
+DB_HOST                 # db
+DB_PORT                 # 5432 (порт по умолчанию)
+```
+
+- Создать и запустить контейнеры Docker, выполнить команду на сервере
+
+```
+sudo docker compose -f docker-compose.production.yml up
+```
+
+- После успешной сборки выполнить миграции:
+```
+sudo docker compose -f docker-compose.production.yml exec backend python manage.py migrate
+```
+
+- Создать суперпользователя:
+```
+sudo docker compose -f docker-compose.production.yml exec backend python manage.py createsuperuser
+```
+
+- Собрать статику:
+```
+sudo docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic
+sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/collected_static/. /app/static/
+```
+
+- Для остановки контейнеров Docker:
+```
+sudo docker compose -f docker-compose.production.yml down -v      # с удалением
+sudo docker compose -f docker-compose.production.yml stop         # без удаления
+```
+
+### Деплой на сервер (CD-CI) осуществляется через "push" в ветку master.
+#### Процедура включает в себя:
+- проверку кода на соответствие стандарту PEP8 (flake8)
+- сборка и доставка докер-образов frontend и backend на Docker Hub
+- разворачивание проекта на удаленном сервере
+- отправка сообщения в Telegram (в случае успешного завершения вышеуказанных процедур)
+
+### Запуск проекта на локальной машине:
+
+- Клонировать репозиторий:
+```
+https://github.com/Freeman-83/kittygram-docker
+```
+
+- В директории infra в файле .env указать следующие данные:
+```
+DB_ENGINE=django.db.backends.postgresql
+DB_NAME=postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+DB_HOST=db
+DB_PORT=5432
+SECRET_KEY='Из настроек Django-settings'
+```
+
+- Создать и запустить контейнеры Docker.
+
+
+- После запуска проект будут доступен по адресу: [http://localhost/](http://localhost/)
+
+
+- Документация будет доступна по адресу: [http://localhost/api/docs/](http://localhost/api/docs/)
+
+
+### Автор:
+
+### Марин Михаил
